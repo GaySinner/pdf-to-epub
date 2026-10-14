@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF to EPUB</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a64;
+    --line: #dcdad2; --accent: #2f5d50; --accent-ink: #ffffff; --warn: #9a3b1f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151614; --card: #1e201d; --ink: #ecebe5; --muted: #9a998f;
+      --line: #34362f; --accent: #7fb7a4; --accent-ink: #11140f; --warn: #e48a68;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 20px; margin-bottom: 16px;
+  }
+  #drop {
+    border: 2px dashed var(--line); border-radius: 12px; padding: 36px 16px;
+    text-align: center; cursor: pointer; color: var(--muted);
+  }
+  #drop.over, #drop:focus-visible { border-color: var(--accent); color: var(--ink); outline: none; }
+  #drop strong { color: var(--ink); display: block; font-size: 1.05rem; margin-bottom: 4px; }
+  #fileName { margin-top: 10px; color: var(--ink); word-break: break-all; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+  label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+  input[type=text], select {
+    width: 100%; padding: 9px 10px; font: inherit; color: var(--ink);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .check { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 1rem; margin: 0; }
+  .full { grid-column: 1 / -1; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  button {
+    font: inherit; font-weight: 600; padding: 11px 18px; border-radius: 8px;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer;
+  }
+  button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  progress { width: 100%; height: 10px; accent-color: var(--accent); }
+  #status { margin: 10px 0 0; color: var(--muted); min-height: 1.5em; }
+  #status.err { color: var(--warn); }
+  #result a { color: var(--accent); font-weight: 600; }
+  .hidden { display: none; }
+  footer { color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>PDF to EPUB</h1>
+  <p class="sub">Turn a manga or comic PDF into a fixed-layout EPUB that Kindle can read. Everything runs in your browser; your file is never uploaded.</p>
+
+  <div class="card">
+    <div id="drop" tabindex="0" role="button" aria-label="Choose a PDF">
+      <strong>Drop a PDF here, or tap to choose one</strong>
+      Works best with scanned or image-based pages
+      <div id="fileName"></div>
+    </div>
+    <input id="file" type="file" accept="application/pdf,.pdf" class="hidden">
+  </div>
+
+  <div class="card">
+    <div class="grid">
+      <div class="full"><label for="title">Title</label><input id="title" type="text" placeholder="Book title"></div>
+      <div class="full"><label for="author">Author</label><input id="author" type="text" placeholder="Optional"></div>
+      <div>
+        <label for="dir">Reading direction</label>
+        <select id="dir">
+          <option value="rtl">Right to left (manga)</option>
+          <option value="ltr">Left to right (western comics)</option>
+        </select>
+      </div>
+      <div>
+        <label for="height">Page height</label>
+        <select id="height">
+          <option value="1100">1100 px (small file)</option>
+          <option value="1400" selected>1400 px (balanced)</option>
+          <option value="1800">1800 px (sharpest, large file)</option>
+        </select>
+      </div>
+      <div class="full">
+        <label for="quality">JPEG quality: <span id="qv">65</span></label>
+        <input id="quality" type="range" min="35" max="92" value="65">
+      </div>
+      <div class="full"><label class="check"><input id="gray" type="checkbox" checked> Convert to grayscale (smaller file; leave off for color comics)</label></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button id="go" disabled>Convert</button>
+      <button id="cancel" class="ghost hidden">Cancel</button>
+    </div>
+    <progress id="bar" value="0" max="1" class="hidden"></progress>
+    <p id="status" role="status"></p>
+    <p id="result" class="hidden"></p>
+  </div>
+
+  <footer>Send the EPUB to your Kindle with Amazon's Send to Kindle app or web page. Amazon accepts files up to 200 MB.</footer>
+</main>
+<script src="lib/jszip.min.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
