@@ -22,27 +22,6 @@ Pages are processed one at a time, so large PDFs work, though a phone may be slo
 
 Amazon's Send to Kindle accepts files up to 200 MB. If the result is bigger, lower the page height or quality.
 
-## Publish on GitHub Pages
-
-```bash
-git init
-git add .
-git commit -m "PDF to EPUB converter"
-gh repo create pdf-to-epub --public --source=. --push
-```
-
-Then in the repo on GitHub: **Settings, Pages, Build and deployment, Source: Deploy from a branch, Branch: main, folder: / (root), Save.**
-After a minute the site is live at `https://<your-username>.github.io/pdf-to-epub/`.
-
-## Run locally
-
-The page uses ES modules, so open it through a local server rather than by double-clicking:
-
-```bash
-python3 -m http.server 8000
-# then visit http://localhost:8000
-```
-
 ## Notes
 
 - Some PDFs store pages as JPEG 2000 images. The `lib/wasm/` folder holds the decoder pdf.js needs for them, so keep it.
