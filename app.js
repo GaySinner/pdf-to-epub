@@ -5,7 +5,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("./lib/pdf.worker.min.mjs", imp
 const $ = (id) => document.getElementById(id);
 const el = {
   drop: $("drop"), file: $("file"), fileName: $("fileName"),
-  title: $("title"), author: $("author"), dir: $("dir"), height: $("height"),
+  title: $("title"), author: $("author"), dir: $("dir"), height: $("height"), device: $("device"),
   quality: $("quality"), qv: $("qv"), gray: $("gray"),
   est: $("est"), go: $("go"), cancel: $("cancel"), bar: $("bar"), status: $("status"), result: $("result"),
 };
@@ -45,7 +45,9 @@ el.file.addEventListener("change", () => chooseFile(el.file.files[0]));
 ["dragleave", "drop"].forEach((t) => el.drop.addEventListener(t, (e) => { e.preventDefault(); el.drop.classList.remove("over"); }));
 el.drop.addEventListener("drop", (e) => chooseFile(e.dataTransfer.files[0]));
 el.quality.addEventListener("input", () => { el.qv.textContent = el.quality.value; scheduleEstimate(); });
-[el.height, el.gray].forEach((c) => c.addEventListener("change", scheduleEstimate));
+el.device.addEventListener("change", () => { if (el.device.value) { el.height.value = el.device.value; scheduleEstimate(); } });
+el.height.addEventListener("input", () => { if (el.device.value !== el.height.value) el.device.value = ""; scheduleEstimate(); });
+el.gray.addEventListener("change", scheduleEstimate);
 el.cancel.addEventListener("click", () => { cancelled = true; });
 el.go.addEventListener("click", convert);
 
@@ -114,7 +116,7 @@ async function updateEstimate() {
     const total = estPdf.numPages;
     const count = Math.min(4, total);
     const picks = [...new Set(Array.from({ length: count }, (_, k) => Math.max(1, Math.round(((k + 0.5) * total) / count))))];
-    const targetH = parseInt(el.height.value, 10);
+    const targetH = Math.min(3200, Math.max(400, parseInt(el.height.value, 10) || 1400));
     const quality = parseInt(el.quality.value, 10) / 100;
     let sum = 0;
     for (const p of picks) {
@@ -150,7 +152,7 @@ async function convert() {
   el.result.classList.add("hidden");
   el.bar.value = 0;
 
-  const targetH = parseInt(el.height.value, 10);
+  const targetH = Math.min(3200, Math.max(400, parseInt(el.height.value, 10) || 1400));
   const quality = parseInt(el.quality.value, 10) / 100;
   const rtl = el.dir.value === "rtl";
   const title = el.title.value.trim() || "Untitled";

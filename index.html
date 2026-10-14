@@ -85,12 +85,21 @@
         </select>
       </div>
       <div>
-        <label for="height">Page height</label>
-        <select id="height">
-          <option value="1100">1100 px (small file)</option>
-          <option value="1400" selected>1400 px (balanced)</option>
-          <option value="1800">1800 px (sharpest, large file)</option>
+        <label for="device">Device preset (max page size)</label>
+        <select id="device">
+          <option value="">Custom</option>
+          <option value="2480">Kindle Scribe (1860 x 2480)</option>
+          <option value="1680">Kindle Oasis / Colorsoft (1264 x 1680)</option>
+          <option value="1648">Kindle Paperwhite 11th gen+ (1236 x 1648)</option>
+          <option value="1448">Kindle Basic 2022 / Paperwhite 10th gen and older (1072 x 1448)</option>
+          <option value="800">Kindle Basic 2019 and older, Touch (600 x 800)</option>
+          <option value="1100">Small file (1100 px)</option>
+          <option value="1400">Balanced (1400 px)</option>
         </select>
+      </div>
+      <div>
+        <label for="height">Page height (px)</label>
+        <input id="height" type="number" min="400" max="3200" step="10" value="1400">
       </div>
       <div class="full">
         <label for="quality">JPEG quality: <span id="qv">65</span></label>
