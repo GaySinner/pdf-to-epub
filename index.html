@@ -53,7 +53,7 @@
   button:disabled { opacity: .45; cursor: not-allowed; }
   progress { width: 100%; height: 10px; accent-color: var(--accent); }
   #status { margin: 10px 0 0; color: var(--muted); min-height: 1.5em; }
-  #status.err { color: var(--warn); }
+  #status.err, #est.err { color: var(--warn); }
   #result a { color: var(--accent); font-weight: 600; }
   .hidden { display: none; }
   footer { color: var(--muted); font-size: .85rem; }
@@ -101,6 +101,7 @@
   </div>
 
   <div class="card">
+    <p id="est" role="status" style="margin:0 0 12px;color:var(--muted)"></p>
     <div class="row">
       <button id="go" disabled>Convert</button>
       <button id="cancel" class="ghost hidden">Cancel</button>

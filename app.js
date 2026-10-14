@@ -7,7 +7,7 @@ const el = {
   drop: $("drop"), file: $("file"), fileName: $("fileName"),
   title: $("title"), author: $("author"), dir: $("dir"), height: $("height"),
   quality: $("quality"), qv: $("qv"), gray: $("gray"),
-  go: $("go"), cancel: $("cancel"), bar: $("bar"), status: $("status"), result: $("result"),
+  est: $("est"), go: $("go"), cancel: $("cancel"), bar: $("bar"), status: $("status"), result: $("result"),
 };
 
 let pdfFile = null;
@@ -29,11 +29,13 @@ function chooseFile(f) {
     return;
   }
   pdfFile = f;
+  if (estPdf) { estPdf.destroy().catch(() => {}); estPdf = null; }
   el.fileName.textContent = f.name + " (" + (f.size / 1048576).toFixed(1) + " MB)";
   if (!el.title.value) el.title.value = f.name.replace(/\.pdf$/i, "").replace(/[_]+/g, " ").trim();
   el.go.disabled = false;
   el.result.classList.add("hidden");
   setStatus("");
+  scheduleEstimate();
 }
 
 el.drop.addEventListener("click", () => el.file.click());
@@ -42,7 +44,8 @@ el.file.addEventListener("change", () => chooseFile(el.file.files[0]));
 ["dragenter", "dragover"].forEach((t) => el.drop.addEventListener(t, (e) => { e.preventDefault(); el.drop.classList.add("over"); }));
 ["dragleave", "drop"].forEach((t) => el.drop.addEventListener(t, (e) => { e.preventDefault(); el.drop.classList.remove("over"); }));
 el.drop.addEventListener("drop", (e) => chooseFile(e.dataTransfer.files[0]));
-el.quality.addEventListener("input", () => { el.qv.textContent = el.quality.value; });
+el.quality.addEventListener("input", () => { el.qv.textContent = el.quality.value; scheduleEstimate(); });
+[el.height, el.gray].forEach((c) => c.addEventListener("change", scheduleEstimate));
 el.cancel.addEventListener("click", () => { cancelled = true; });
 el.go.addEventListener("click", convert);
 
@@ -62,9 +65,85 @@ function canvasToJpeg(canvas, quality) {
   });
 }
 
+async function renderPage(pdf, i, targetH, quality, gray) {
+  const page = await pdf.getPage(i);
+  const scale = targetH / page.getViewport({ scale: 1 }).height;
+  const viewport = page.getViewport({ scale });
+  const w = Math.round(viewport.width);
+  const h = Math.round(viewport.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d", { willReadFrequently: gray });
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, w, h);
+  await page.render({ canvasContext: ctx, canvas, viewport }).promise;
+  if (gray) toGray(ctx, w, h);
+  const blob = await canvasToJpeg(canvas, quality);
+  canvas.width = canvas.height = 0;
+  page.cleanup();
+  return { blob, w, h };
+}
+
+const mb = (n) => (n / 1048576).toFixed(1);
+let estPdf = null;
+let estToken = 0;
+let estTimer = null;
+
+async function openPdf(file) {
+  const data = new Uint8Array(await file.arrayBuffer());
+  const base = new URL("./lib/", import.meta.url).href;
+  return pdfjsLib.getDocument({
+    data,
+    wasmUrl: base + "wasm/",
+    cMapUrl: base + "cmaps/",
+    cMapPacked: true,
+    standardFontDataUrl: base + "standard_fonts/",
+    iccUrl: base + "iccs/",
+  }).promise;
+}
+
+// Encodes up to 4 sample pages with the current settings and extrapolates.
+async function updateEstimate() {
+  const token = ++estToken;
+  if (!pdfFile || converting) return;
+  el.est.textContent = "Estimating size…";
+  try {
+    if (!estPdf) estPdf = await openPdf(pdfFile);
+    if (token !== estToken) return;
+    const total = estPdf.numPages;
+    const count = Math.min(4, total);
+    const picks = [...new Set(Array.from({ length: count }, (_, k) => Math.max(1, Math.round(((k + 0.5) * total) / count))))];
+    const targetH = parseInt(el.height.value, 10);
+    const quality = parseInt(el.quality.value, 10) / 100;
+    let sum = 0;
+    for (const p of picks) {
+      const { blob } = await renderPage(estPdf, p, targetH, quality, el.gray.checked);
+      if (token !== estToken) return;
+      sum += blob.size;
+    }
+    const size = (sum / picks.length) * total + 20000;
+    el.est.textContent = `Estimated size: ~${mb(size)} MB (${total} pages)` +
+      (size > 200 * 1048576 ? " — over Amazon's 200 MB limit" : "");
+    el.est.classList.toggle("err", size > 200 * 1048576);
+  } catch (err) {
+    console.error(err);
+    if (token === estToken) el.est.textContent = "";
+  }
+}
+
+function scheduleEstimate() {
+  clearTimeout(estTimer);
+  estTimer = setTimeout(updateEstimate, 400);
+}
+
+let converting = false;
+
 async function convert() {
   if (!pdfFile) return;
   cancelled = false;
+  converting = true;
+  estToken++;
   el.go.disabled = true;
   el.cancel.classList.remove("hidden");
   el.bar.classList.remove("hidden");
@@ -112,24 +191,7 @@ async function convert() {
     for (let i = 1; i <= total; i++) {
       if (cancelled) throw new Error("cancelled");
       setStatus(`Rendering page ${i} of ${total}…`);
-      const page = await pdf.getPage(i);
-      const base = page.getViewport({ scale: 1 });
-      const scale = targetH / base.height;
-      const viewport = page.getViewport({ scale });
-      const w = Math.round(viewport.width);
-      const h = Math.round(viewport.height);
-
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d", { willReadFrequently: el.gray.checked });
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(0, 0, w, h);
-      await page.render({ canvasContext: ctx, canvas, viewport }).promise;
-      if (el.gray.checked) toGray(ctx, w, h);
-      const blob = await canvasToJpeg(canvas, quality);
-      canvas.width = canvas.height = 0;
-      page.cleanup();
+      const { blob, w, h } = await renderPage(pdf, i, targetH, quality, el.gray.checked);
 
       const n = pad(i);
       if (i === 1) firstSize = `${w}x${h}`;
@@ -195,6 +257,7 @@ async function convert() {
 }
 
 function finish() {
+  converting = false;
   el.go.disabled = !pdfFile;
   el.cancel.classList.add("hidden");
 }
