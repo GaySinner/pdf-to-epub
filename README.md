@@ -2,6 +2,8 @@
 
 A small static web page that converts a comic or manga PDF into a fixed-layout EPUB for Kindle. It runs entirely in the browser: the PDF is never uploaded anywhere, so it works on GitHub Pages with no server.
 
+## https://gaysinner.github.io/pdf-to-epub/
+
 ## How it works
 
 1. [pdf.js](https://github.com/mozilla/pdf.js) renders each PDF page onto a canvas at your chosen height.
